@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: microchaos-postgres
+    environment:
+      POSTGRES_DB: microchaos
+      POSTGRES_USER: microchaos
+      POSTGRES_PASSWORD: microchaos
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/10-schema.sql:ro
+      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/20-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U microchaos -d microchaos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

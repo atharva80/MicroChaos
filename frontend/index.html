@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MicroChaos Command Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="nebula n1"></div>
+    <div class="nebula n2"></div>
+    <div class="nebula n3"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <h1>MicroChaos</h1>
+        <p>Chaos + Topology + Monitoring</p>
+      </div>
+      <div class="chip api-chip">
+        <span>API</span>
+        <strong id="apiBaseLabel">http://localhost:8080/api</strong>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel wide">
+        <h2>System Overview</h2>
+        <div class="cards" id="overviewCards">
+          <article class="card">
+            <span>Total Services</span>
+            <strong id="totalServices">0</strong>
+          </article>
+          <article class="card">
+            <span>Experiments</span>
+            <strong id="totalExperiments">0</strong>
+          </article>
+          <article class="card">
+            <span>Active Runs</span>
+            <strong id="activeRuns">0</strong>
+          </article>
+          <article class="card">
+            <span>Resilience</span>
+            <strong id="avgResilience">0</strong>
+          </article>
+          <article class="card ok">
+            <span>Healthy</span>
+            <strong id="healthyCount">0</strong>
+          </article>
+          <article class="card warn">
+            <span>Degraded</span>
+            <strong id="degradedCount">0</strong>
+          </article>
+          <article class="card bad">
+            <span>Down</span>
+            <strong id="downCount">0</strong>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Service Registry</h2>
+        <form id="serviceForm" class="inline-form">
+          <input name="name" placeholder="service name" required />
+          <input name="baseUrl" placeholder="http://localhost:9001" required />
+          <input name="environment" placeholder="dev" value="dev" />
+          <button type="submit">Add Service</button>
+        </form>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Base URL</th>
+                <th>Env</th>
+              </tr>
+            </thead>
+            <tbody id="serviceRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Dependency Mapper</h2>
+        <form id="dependencyForm" class="inline-form">
+          <select id="sourceServiceId" required></select>
+          <select id="targetServiceId" required></select>
+          <select id="dependencyType">
+            <option>REST</option>
+            <option>DB</option>
+            <option>CACHE</option>
+            <option>QUEUE</option>
+            <option>AUTH</option>
+          </select>
+          <select id="communicationMode">
+            <option>SYNC</option>
+            <option>ASYNC</option>
+          </select>
+          <button type="submit">Connect</button>
+        </form>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>From</th>
+                <th>To</th>
+                <th>Type</th>
+                <th>Mode</th>
+                <th>Protocol</th>
+              </tr>
+            </thead>
+            <tbody id="dependencyRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel wide">
+        <h2>Topology Graph</h2>
+        <p class="hint">Node color follows monitoring state. Dashed links are async.</p>
+        <svg id="topologyGraph" viewBox="0 0 980 520" preserveAspectRatio="xMidYMid meet"></svg>
+      </section>
+
+      <section class="panel wide">
+        <h2>Live Monitoring</h2>
+        <p class="hint">Auto refresh every 3 seconds. Use controls to force outage and recovery.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>State</th>
+                <th>Health</th>
+                <th>RTT(ms)</th>
+                <th>Faults</th>
+                <th>Latency</th>
+                <th>Timeout</th>
+                <th>Error %</th>
+                <th>Requests</th>
+                <th>Fail %</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="monitoringRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Experiment Studio</h2>
+        <form id="experimentForm" class="inline-form">
+          <input name="name" placeholder="experiment name" required />
+          <select id="experimentTargetId" required></select>
+          <select id="faultType">
+            <option>LATENCY</option>
+            <option>ERROR_RESPONSE</option>
+            <option>TIMEOUT</option>
+            <option>DATABASE_CONNECTION</option>
+            <option>DEPENDENCY_UNAVAILABLE</option>
+            <option>CPU_SPIKE</option>
+            <option>THREAD_POOL_EXHAUSTION</option>
+          </select>
+          <select id="stressType">
+            <option>BURST</option>
+            <option>RAMP_UP</option>
+          </select>
+          <input id="intensity" type="number" min="1" max="100" value="40" />
+          <button type="submit">Create</button>
+        </form>
+        <div id="experimentList" class="pill-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Run Queue</h2>
+        <p class="hint">Metrics and scorecard are rendered in structured view below.</p>
+        <div id="runList" class="pill-list"></div>
+      </section>
+
+      <section class="panel wide">
+        <h2>Run Analytics</h2>
+        <div class="metrics-grid">
+          <article class="metric-card">
+            <span>Avg Response (ms)</span>
+            <strong id="metricAvgResponse">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>Avg P95 (ms)</span>
+            <strong id="metricAvgP95">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>Avg Error %</span>
+            <strong id="metricAvgError">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>Avg Throughput</span>
+            <strong id="metricAvgThroughput">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>Avg Availability %</span>
+            <strong id="metricAvgAvailability">-</strong>
+          </article>
+          <article class="metric-card">
+            <span>Snapshots</span>
+            <strong id="metricSamples">0</strong>
+          </article>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Response ms</th>
+                <th>P95 ms</th>
+                <th>Error %</th>
+                <th>Throughput</th>
+                <th>Availability %</th>
+              </tr>
+            </thead>
+            <tbody id="metricRows"></tbody>
+          </table>
+        </div>
+
+        <div class="score-grid">
+          <article class="score-card"><span>Fault Tolerance</span><strong id="scoreFault">-</strong></article>
+          <article class="score-card"><span>Recovery Speed</span><strong id="scoreRecovery">-</strong></article>
+          <article class="score-card"><span>Observability</span><strong id="scoreObservability">-</strong></article>
+          <article class="score-card"><span>Dependency Stability</span><strong id="scoreDependency">-</strong></article>
+          <article class="score-card"><span>Overall</span><strong id="scoreOverall">-</strong></article>
+        </div>
+
+        <details id="rawPanel" class="raw-panel">
+          <summary>Show Raw Data (Optional)</summary>
+          <pre id="runOutput">Select a run and click Metrics or Scorecard.</pre>
+        </details>
+      </section>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
