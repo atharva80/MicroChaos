@@ -1,0 +1,14 @@
+com\microchaos\swing\ui\DashboardPanel$TopologyGraphPanel.class
+com\microchaos\swing\MicroChaosSwingApp.class
+com\microchaos\swing\api\ApiClient.class
+com\microchaos\swing\model\DashboardOverview$Monitoring.class
+com\microchaos\swing\model\DashboardOverview.class
+com\microchaos\swing\model\ExperimentRun.class
+com\microchaos\swing\model\Experiment.class
+com\microchaos\swing\ui\DashboardPanel.class
+com\microchaos\swing\ui\RunsPanel.class
+com\microchaos\swing\model\Service.class
+com\microchaos\swing\model\MonitoringData.class
+com\microchaos\swing\ui\ExperimentsPanel.class
+com\microchaos\swing\ui\MonitoringPanel.class
+com\microchaos\swing\ui\ServicesPanel.class
