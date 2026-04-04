@@ -2,6 +2,7 @@ package com.microchaos.backend;
 
 import com.microchaos.backend.api.ApiRouter;
 import com.microchaos.backend.core.AnalyticsService;
+import com.microchaos.backend.core.DemoJdbcBootstrap;
 import com.microchaos.backend.core.ExperimentService;
 import com.microchaos.backend.core.InMemoryStore;
 import com.microchaos.backend.core.MonitoringService;
@@ -16,6 +17,9 @@ public class MicroChaosBackendApplication {
     public static void main(String[] args) throws Exception {
         int port = parsePort(System.getenv().getOrDefault("PORT", "8080"));
         int demoBasePort = parsePort(System.getenv().getOrDefault("DEMO_BASE_PORT", "9000"));
+
+        DemoJdbcBootstrap jdbcBootstrap = new DemoJdbcBootstrap();
+        jdbcBootstrap.initialize();
 
         InMemoryStore store = new InMemoryStore();
         ServiceRegistryService serviceRegistryService = new ServiceRegistryService(store);
