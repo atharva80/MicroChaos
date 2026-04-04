@@ -3,48 +3,74 @@ package com.microchaos.swing.ui;
 import com.microchaos.swing.api.ApiClient;
 import com.microchaos.swing.model.Experiment;
 import com.microchaos.swing.model.Service;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.util.HashMap;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableModel;
 
 public class ExperimentsPanel extends JPanel {
     private final ApiClient apiClient;
-    private JTable experimentsTable;
-    private DefaultTableModel tableModel;
-    private Map<Long, String> serviceIdToName;
-    private JComboBox<String> targetServiceCombo;
+    private final Map<Long, Service> servicesById = new LinkedHashMap<>();
+    private final DefaultTableModel tableModel;
+    private final JTable experimentsTable;
+    private JComboBox<Service> targetServiceCombo;
     private JComboBox<String> faultTypeCombo;
+    private JComboBox<String> stressTypeCombo;
     private JTextField nameField;
     private JSpinner intensitySpinner;
 
     public ExperimentsPanel(ApiClient apiClient) {
         this.apiClient = apiClient;
-        this.serviceIdToName = new HashMap<>();
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         setBackground(new Color(20, 25, 45));
 
-        // Title
+        JPanel headerPanel = new JPanel(new BorderLayout(0, 10));
+        headerPanel.setOpaque(false);
+        headerPanel.add(createTitleLabel(), BorderLayout.NORTH);
+        headerPanel.add(createFormPanel(), BorderLayout.CENTER);
+
+        tableModel = new DefaultTableModel(
+            new String[]{"ID", "Name", "Target Service", "Fault Type", "Stress Type", "Intensity", "Duration (s)", "Status"},
+            0
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        experimentsTable = createTable();
+
+        add(headerPanel, BorderLayout.NORTH);
+        add(createTablePanel(), BorderLayout.CENTER);
+
+        refresh();
+    }
+
+    private JLabel createTitleLabel() {
         JLabel titleLabel = new JLabel("Experiment Studio");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
         titleLabel.setForeground(Color.WHITE);
-
-        // Form Panel
-        JPanel formPanel = createFormPanel();
-
-        // Table Panel
-        JPanel tablePanel = createTablePanel();
-
-        // Add to main panel
-        add(titleLabel, BorderLayout.NORTH);
-        add(formPanel, BorderLayout.PAGE_START);
-        add(tablePanel, BorderLayout.CENTER);
-
-        refresh();
+        return titleLabel;
     }
 
     private JPanel createFormPanel() {
@@ -61,8 +87,12 @@ public class ExperimentsPanel extends JPanel {
         panel.add(targetServiceCombo);
 
         panel.add(new JLabel("Fault Type:"));
-        faultTypeCombo = new JComboBox<>(new String[]{"LATENCY", "TIMEOUT", "ERROR", "CRASH"});
+        faultTypeCombo = new JComboBox<>(new String[]{"LATENCY", "TIMEOUT", "ERROR", "CRASH", "DEPENDENCY_UNAVAILABLE"});
         panel.add(faultTypeCombo);
+
+        panel.add(new JLabel("Stress Type:"));
+        stressTypeCombo = new JComboBox<>(new String[]{"BURST", "STEADY", "RAMP"});
+        panel.add(stressTypeCombo);
 
         panel.add(new JLabel("Intensity:"));
         intensitySpinner = new JSpinner(new SpinnerNumberModel(50, 0, 100, 10));
@@ -72,6 +102,10 @@ public class ExperimentsPanel extends JPanel {
         createButton.addActionListener(e -> createExperiment());
         panel.add(createButton);
 
+        JButton runButton = new JButton("Run Selected");
+        runButton.addActionListener(e -> runSelectedExperiment());
+        panel.add(runButton);
+
         JButton refreshButton = new JButton("Refresh");
         refreshButton.addActionListener(e -> refresh());
         panel.add(refreshButton);
@@ -79,63 +113,80 @@ public class ExperimentsPanel extends JPanel {
         return panel;
     }
 
+    private JTable createTable() {
+        JTable table = new JTable(tableModel);
+        table.setBackground(new Color(30, 35, 60));
+        table.setForeground(Color.WHITE);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setRowHeight(28);
+        return table;
+    }
+
     private JPanel createTablePanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(new Color(20, 25, 45));
-
-        tableModel = new DefaultTableModel(
-            new String[]{"ID", "Name", "Target Service", "Fault Type", "Stress Type", "Intensity", "Duration (s)", "Action"},
-            0
-        );
-        experimentsTable = new JTable(tableModel);
-        experimentsTable.setBackground(new Color(30, 35, 60));
-        experimentsTable.setForeground(Color.WHITE);
-
-        JScrollPane scrollPane = new JScrollPane(experimentsTable);
-        panel.add(scrollPane, BorderLayout.CENTER);
-
+        panel.add(new JScrollPane(experimentsTable), BorderLayout.CENTER);
         return panel;
     }
 
     private void createExperiment() {
         String name = nameField.getText().trim();
-        String targetService = targetServiceCombo.getSelectedItem() != null ? targetServiceCombo.getSelectedItem().toString() : "";
-        String faultType = faultTypeCombo.getSelectedItem().toString();
+        Service targetService = (Service) targetServiceCombo.getSelectedItem();
+        String faultType = String.valueOf(faultTypeCombo.getSelectedItem());
+        String stressType = String.valueOf(stressTypeCombo.getSelectedItem());
         int intensity = (Integer) intensitySpinner.getValue();
 
-        if (name.isEmpty() || targetService.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "All fields are required!");
+        if (name.isEmpty() || targetService == null) {
+            JOptionPane.showMessageDialog(this, "Experiment name and target service are required.");
             return;
         }
 
-        // Find the service ID from name
-        long serviceId = 0;
-        for (Map.Entry<Long, String> entry : serviceIdToName.entrySet()) {
-            if (entry.getValue().equals(targetService)) {
-                serviceId = entry.getKey();
-                break;
-            }
-        }
-
-        if (serviceId == 0) {
-            JOptionPane.showMessageDialog(this, "Invalid service selected!");
-            return;
-        }
-
-        final long finalServiceId = serviceId;
         new Thread(() -> {
             try {
-                String endpoint = "/experiments?projectId=1&name=" + name + "&targetServiceId=" + finalServiceId + 
-                                  "&faultType=" + faultType + "&stressType=BURST&intensity=" + intensity + 
-                                  "&durationSeconds=60&blastRadiusLimit=3&createdBy=1";
-                apiClient.post(endpoint, String.class);
+                String endpoint = "/experiments?projectId=1"
+                    + "&name=" + encode(name)
+                    + "&targetServiceId=" + targetService.id
+                    + "&faultType=" + encode(faultType)
+                    + "&stressType=" + encode(stressType)
+                    + "&intensity=" + intensity
+                    + "&durationSeconds=60"
+                    + "&blastRadiusLimit=3"
+                    + "&createdBy=1";
+                apiClient.post(endpoint, Experiment.class);
                 SwingUtilities.invokeLater(() -> {
                     nameField.setText("");
                     refresh();
                 });
             } catch (Exception e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Error creating experiment: " + e.getMessage());
+                showError("Error creating experiment: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    private void runSelectedExperiment() {
+        int selectedRow = experimentsTable.getSelectedRow();
+        if (selectedRow < 0) {
+            JOptionPane.showMessageDialog(this, "Select an experiment to run.");
+            return;
+        }
+
+        long experimentId = ((Number) tableModel.getValueAt(selectedRow, 0)).longValue();
+        String experimentName = String.valueOf(tableModel.getValueAt(selectedRow, 1));
+
+        new Thread(() -> {
+            try {
+                String response = apiClient.post("/experiments/" + experimentId + "/run", String.class);
+                SwingUtilities.invokeLater(() -> {
+                    refresh();
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "Experiment \"" + experimentName + "\" executed.\n\n" + response,
+                        "Run Created",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+                });
+            } catch (Exception e) {
+                showError("Error running experiment: " + e.getMessage());
             }
         }).start();
     }
@@ -143,40 +194,52 @@ public class ExperimentsPanel extends JPanel {
     private void refresh() {
         new Thread(() -> {
             try {
-                // Get service mappings
                 List<Service> services = apiClient.getList("/services", Service.class);
-                serviceIdToName.clear();
+                List<Experiment> experiments = apiClient.getList("/experiments", Experiment.class);
+
+                servicesById.clear();
                 for (Service service : services) {
-                    serviceIdToName.put(service.id, service.name);
+                    servicesById.put(service.id, service);
                 }
 
                 SwingUtilities.invokeLater(() -> {
+                    Service selectedService = (Service) targetServiceCombo.getSelectedItem();
                     targetServiceCombo.removeAllItems();
-                    for (String serviceName : serviceIdToName.values()) {
-                        targetServiceCombo.addItem(serviceName);
+                    for (Service service : services) {
+                        targetServiceCombo.addItem(service);
                     }
-                });
+                    if (selectedService != null) {
+                        targetServiceCombo.setSelectedItem(selectedService);
+                    }
 
-                List<Experiment> experiments = apiClient.getList("/experiments", Experiment.class);
-                SwingUtilities.invokeLater(() -> {
                     tableModel.setRowCount(0);
-                    for (Experiment exp : experiments) {
-                        String serviceName = serviceIdToName.getOrDefault(exp.targetServiceId, "Unknown");
+                    for (Experiment experiment : experiments) {
+                        String serviceName = servicesById.containsKey(experiment.targetServiceId)
+                            ? servicesById.get(experiment.targetServiceId).name
+                            : "Unknown";
                         tableModel.addRow(new Object[]{
-                            exp.id,
-                            exp.name,
+                            experiment.id,
+                            experiment.name,
                             serviceName,
-                            exp.faultType,
-                            exp.stressType,
-                            exp.intensity,
-                            exp.durationSeconds,
-                            "Run"
+                            experiment.faultType,
+                            experiment.stressType,
+                            experiment.intensity,
+                            experiment.durationSeconds,
+                            experiment.status
                         });
                     }
                 });
             } catch (Exception e) {
-                e.printStackTrace();
+                showError("Error loading experiments: " + e.getMessage());
             }
         }).start();
+    }
+
+    private void showError(String message) {
+        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, message));
+    }
+
+    private static String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }

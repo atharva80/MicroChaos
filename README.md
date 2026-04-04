@@ -20,9 +20,8 @@ cd demo-services
 ./scripts/run-demo-stack.sh
 ```
 
-If `9000-9005` are occupied:
+If 9000-9005 are occupied:
 
-```bash
 cd demo-services
 DEMO_BASE_PORT=9100 ./scripts/run-demo-stack.sh
 ```

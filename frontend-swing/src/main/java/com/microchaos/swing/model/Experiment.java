@@ -9,6 +9,11 @@ public class Experiment {
     public String stressType;
     public int intensity;
     public int durationSeconds;
+    public String remediationMode;
+    public int blastRadiusLimit;
+    public String status;
+    public long createdBy;
+    public String createdAt;
 
     @Override
     public String toString() {

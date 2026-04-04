@@ -6,9 +6,7 @@ import com.microchaos.swing.model.Service;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class DashboardPanel extends JPanel {
     private final ApiClient apiClient;

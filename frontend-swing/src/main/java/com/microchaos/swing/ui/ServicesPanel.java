@@ -2,16 +2,29 @@ package com.microchaos.swing.ui;
 
 import com.microchaos.swing.api.ApiClient;
 import com.microchaos.swing.model.Service;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.table.DefaultTableModel;
 
 public class ServicesPanel extends JPanel {
     private final ApiClient apiClient;
-    private JTable servicesTable;
-    private DefaultTableModel tableModel;
+    private final DefaultTableModel tableModel;
+    private final JTable servicesTable;
     private JTextField nameField;
     private JTextField baseUrlField;
     private JTextField envField;
@@ -22,23 +35,33 @@ public class ServicesPanel extends JPanel {
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         setBackground(new Color(20, 25, 45));
 
-        // Title
+        JPanel headerPanel = new JPanel(new BorderLayout(0, 10));
+        headerPanel.setOpaque(false);
+        headerPanel.add(createTitleLabel(), BorderLayout.NORTH);
+        headerPanel.add(createFormPanel(), BorderLayout.CENTER);
+
+        tableModel = new DefaultTableModel(
+            new String[]{"ID", "Name", "Base URL", "Environment", "Health", "Timeout", "Status"},
+            0
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+        servicesTable = createTable();
+
+        add(headerPanel, BorderLayout.NORTH);
+        add(createTablePanel(), BorderLayout.CENTER);
+
+        refresh();
+    }
+
+    private JLabel createTitleLabel() {
         JLabel titleLabel = new JLabel("Service Registry");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
         titleLabel.setForeground(Color.WHITE);
-
-        // Form Panel
-        JPanel formPanel = createFormPanel();
-        
-        // Table Panel
-        JPanel tablePanel = createTablePanel();
-
-        // Add to main panel
-        add(titleLabel, BorderLayout.NORTH);
-        add(formPanel, BorderLayout.PAGE_START);
-        add(tablePanel, BorderLayout.CENTER);
-
-        refresh();
+        return titleLabel;
     }
 
     private JPanel createFormPanel() {
@@ -62,6 +85,10 @@ public class ServicesPanel extends JPanel {
         addButton.addActionListener(e -> addService());
         panel.add(addButton);
 
+        JButton deleteButton = new JButton("Delete Selected");
+        deleteButton.addActionListener(e -> deleteSelectedService());
+        panel.add(deleteButton);
+
         JButton refreshButton = new JButton("Refresh");
         refreshButton.addActionListener(e -> refresh());
         panel.add(refreshButton);
@@ -69,21 +96,19 @@ public class ServicesPanel extends JPanel {
         return panel;
     }
 
+    private JTable createTable() {
+        JTable table = new JTable(tableModel);
+        table.setBackground(new Color(30, 35, 60));
+        table.setForeground(Color.WHITE);
+        table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        table.setRowHeight(28);
+        return table;
+    }
+
     private JPanel createTablePanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(new Color(20, 25, 45));
-
-        tableModel = new DefaultTableModel(
-            new String[]{"ID", "Name", "Base URL", "Environment", "Status"},
-            0
-        );
-        servicesTable = new JTable(tableModel);
-        servicesTable.setBackground(new Color(30, 35, 60));
-        servicesTable.setForeground(Color.WHITE);
-
-        JScrollPane scrollPane = new JScrollPane(servicesTable);
-        panel.add(scrollPane, BorderLayout.CENTER);
-
+        panel.add(new JScrollPane(servicesTable), BorderLayout.CENTER);
         return panel;
     }
 
@@ -93,14 +118,17 @@ public class ServicesPanel extends JPanel {
         String env = envField.getText().trim();
 
         if (name.isEmpty() || baseUrl.isEmpty() || env.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "All fields are required!");
+            JOptionPane.showMessageDialog(this, "All fields are required.");
             return;
         }
 
         new Thread(() -> {
             try {
-                String endpoint = "/services?name=" + name + "&baseUrl=" + baseUrl + "&environment=" + env + "&projectId=1";
-                apiClient.post(endpoint, String.class);
+                String endpoint = "/services?projectId=1"
+                    + "&name=" + encode(name)
+                    + "&baseUrl=" + encode(baseUrl)
+                    + "&environment=" + encode(env);
+                apiClient.post(endpoint, Service.class);
                 SwingUtilities.invokeLater(() -> {
                     nameField.setText("");
                     baseUrlField.setText("");
@@ -108,8 +136,36 @@ public class ServicesPanel extends JPanel {
                     refresh();
                 });
             } catch (Exception e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Error adding service: " + e.getMessage());
+                showError("Error adding service: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    private void deleteSelectedService() {
+        int selectedRow = servicesTable.getSelectedRow();
+        if (selectedRow < 0) {
+            JOptionPane.showMessageDialog(this, "Select a service to delete.");
+            return;
+        }
+
+        long serviceId = ((Number) tableModel.getValueAt(selectedRow, 0)).longValue();
+        String serviceName = String.valueOf(tableModel.getValueAt(selectedRow, 1));
+        int choice = JOptionPane.showConfirmDialog(
+            this,
+            "Delete service \"" + serviceName + "\"?",
+            "Confirm Delete",
+            JOptionPane.YES_NO_OPTION
+        );
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                apiClient.delete("/services/" + serviceId);
+                SwingUtilities.invokeLater(this::refresh);
+            } catch (Exception e) {
+                showError("Error deleting service: " + e.getMessage());
             }
         }).start();
     }
@@ -126,13 +182,23 @@ public class ServicesPanel extends JPanel {
                             service.name,
                             service.baseUrl,
                             service.environment,
+                            service.healthEndpoint,
+                            service.timeoutThresholdMs,
                             service.status
                         });
                     }
                 });
             } catch (Exception e) {
-                e.printStackTrace();
+                showError("Error loading services: " + e.getMessage());
             }
         }).start();
+    }
+
+    private void showError(String message) {
+        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, message));
+    }
+
+    private static String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
     }
 }
