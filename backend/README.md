@@ -1,28 +1,66 @@
 # MicroChaos Backend
 
-Java 21 control-plane backend for:
+Java 21 backend control plane for MicroChaos with PostgreSQL JDBC persistence.
 
-- service registry
-- topology/dependency graph
-- experiment creation and execution
-- fault injection orchestration
-- direct service control (`down`, `latency`, `recover`)
-- metrics and scorecard endpoints
-- live monitoring and per-service history
+## Prerequisites
+
+- Java 21
+- Maven 3.6+
+- PostgreSQL running in Docker
+
+## Start PostgreSQL (if not running)
+
+```bash
+cd /mnt/d/MicroChaos
+docker-compose up -d postgres
+```
 
 ## Run
 
 ```bash
-cd backend
-./scripts/run-backend.sh
+cd /mnt/d/MicroChaos/backend
+mvn compile
+mvn exec:java -Dexec.mainClass="com.microchaos.backend.MicroChaosBackendApplication"
 ```
 
-Backend starts on `http://localhost:8080`.
+Verify:
+```bash
+curl http://localhost:8080/api/health
+```
 
-If demo services use a custom base port, start backend with the same `DEMO_BASE_PORT` so seeded service URLs match:
+## Backend URLs
+
+- Base: `http://localhost:8080`
+- API: `http://localhost:8080/api`
+
+If demo services use a custom base port, start the backend with the same `DEMO_BASE_PORT`:
 
 ```bash
-DEMO_BASE_PORT=9100 ./scripts/run-backend.sh
+cd /mnt/d/MicroChaos/backend
+DEMO_BASE_PORT=9100 mvn exec:java -Dexec.mainClass="com.microchaos.backend.MicroChaosBackendApplication"
+```
+
+## Persistence
+
+Stored in PostgreSQL:
+
+- services
+- service dependencies
+- experiments
+- experiment runs
+- metric snapshots
+
+Still in memory:
+
+- monitoring history
+- remediation policy/rule/execution state
+
+## API Usage Note
+
+Write endpoints use query parameters, for example:
+
+```text
+POST /api/services?name=order-service&baseUrl=http://localhost:9001
 ```
 
 ## Key API Endpoints
@@ -39,6 +77,8 @@ DEMO_BASE_PORT=9100 ./scripts/run-backend.sh
 - `GET|POST /api/experiments`
 - `POST /api/experiments/{id}/run`
 - `POST /api/experiments/{id}/stop`
+- `GET /api/runs`
+- `GET /api/runs/{id}`
 - `GET /api/runs/{id}/metrics`
 - `GET /api/runs/{id}/scorecard`
 - `GET /api/dashboard/overview`
@@ -46,15 +86,9 @@ DEMO_BASE_PORT=9100 ./scripts/run-backend.sh
 - `GET /api/monitoring/services`
 - `GET /api/monitoring/services/{serviceId}/history?limit=30`
 
-## API Usage Note
-
-This baseline uses query parameters for write endpoints (for example `POST /api/services?name=order-service&baseUrl=http://localhost:9001`) to keep the implementation dependency-free.
-
-## Database
-
-PostgreSQL schema and seed files:
+## Database Files
 
 - `db/schema.sql`
 - `db/seed.sql`
 
-The current backend implementation uses in-memory storage for fast local demo runs while preserving full SQL schema for DB migration.
+For full project run steps and SQL inspection examples, see the repo root [README.md](/d:/MicroChaos/README.md).

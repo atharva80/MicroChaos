@@ -1,12 +1,12 @@
 # MicroChaos Swing Frontend
 
-Java Swing desktop application frontend for MicroChaos chaos engineering platform.
+Java Swing desktop application frontend for MicroChaos.
 
 ## Prerequisites
 
-- Java 11 or higher
+- Java 21
 - Maven 3.6+
-- Backend running on `http://localhost:8080/api` (or configure with `-Dapi.base` parameter)
+- backend running on `http://localhost:8080/api`
 
 ## Build
 
@@ -14,22 +14,24 @@ Java Swing desktop application frontend for MicroChaos chaos engineering platfor
 mvn clean package
 ```
 
-This will create an executable JAR in the `target/` directory.
+This creates an executable JAR in `target/`.
 
 ## Run
 
-### Option 1: Via Maven
-```bash
-mvn clean compile exec:java -Dexec.mainClass="com.microchaos.swing.MicroChaosSwingApp"
+### Command (PowerShell)
+
+```powershell
+cd D:\MicroChaos\frontend-swing
+mvn clean compile exec:java -Dexec.mainClass=com.microchaos.swing.MicroChaosSwingApp -Dapi.base=http://localhost:8080/api
 ```
 
-### Option 2: Via JAR (after building)
+### Option 2: JAR
+
 ```bash
 java -jar target/frontend-swing-1.0.0.jar
 ```
 
-### Option 3: With Custom API Base
-If your backend is running on a different port or host:
+### Option 3: Custom API Base
 
 ```bash
 mvn clean compile exec:java \
@@ -37,45 +39,62 @@ mvn clean compile exec:java \
   -Dapi.base="http://your-backend-host:8080/api"
 ```
 
-Or with JAR:
+Or:
+
 ```bash
 java -Dapi.base="http://your-backend-host:8080/api" -jar target/frontend-swing-1.0.0.jar
 ```
 
+## PowerShell Recommendation
+
+If you run from Windows PowerShell, use:
+
+```powershell
+mvn --% clean compile exec:java -Dexec.mainClass=com.microchaos.swing.MicroChaosSwingApp -Dapi.base=http://localhost:8080/api
+```
+
+This avoids PowerShell misparsing `-Dapi.base=...`.
+
+## WSL GUI Note
+
+If you start this app inside WSL and get:
+
+```text
+No X11 DISPLAY variable was set
+```
+
+run the Swing frontend from Windows PowerShell instead of WSL.
+
 ## Features
 
-- **Dashboard**: Overview statistics (services, experiments, active runs, resilience score)
-- **Services**: View all registered microservices and their status
-- **Experiments**: List and manage chaos experiments
-- **Monitoring**: Real-time monitoring of service health and metrics
-- **Runs**: View experiment execution history and metrics
+- dashboard overview
+- services list
+- experiments list
+- monitoring view
+- experiment run history and metrics
 
 ## API Connection
 
-The application connects to the MicroChaos backend API. Make sure the backend is running before starting the Swing frontend.
+Default API base:
 
-### Default Configuration
-- API Base: `http://localhost:8080/api`
-- Auto-refresh: Every 3-5 seconds depending on the panel
+- `http://localhost:8080/api`
 
-### Configuration
-To change the API base URL, use the system property:
-```
+To change the API base:
+
+```text
 -Dapi.base=http://your-custom-url/api
 ```
 
 ## Database
 
-The frontend does not directly access the database. All data is retrieved through the backend API, which manages the PostgreSQL database as per the schema in `backend/db/schema.sql`.
+The Swing frontend does not connect to PostgreSQL directly. It talks to the backend API, and the backend writes and reads the database.
 
 ## Architecture
 
-```
+```text
 MicroChaos Frontend (Swing)
-    ↓
-    Backend API (http://localhost:8080/api)
-    ↓
-    PostgreSQL Database
+-> Backend API (http://localhost:8080/api)
+-> PostgreSQL Database
 ```
 
-The frontend is stateless and communicates only through REST API endpoints.
+For full stack startup steps, see the repo root [README.md](/d:/MicroChaos/README.md).

@@ -2,6 +2,7 @@ package com.microchaos.swing.ui;
 
 import com.microchaos.swing.api.ApiClient;
 import com.microchaos.swing.model.Service;
+import com.microchaos.swing.ui.theme.TableStyler;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -102,6 +103,7 @@ public class ServicesPanel extends JPanel {
         table.setForeground(Color.WHITE);
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setRowHeight(28);
+        TableStyler.styleTable(table);
         return table;
     }
 

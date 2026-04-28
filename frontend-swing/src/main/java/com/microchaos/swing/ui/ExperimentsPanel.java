@@ -3,6 +3,7 @@ package com.microchaos.swing.ui;
 import com.microchaos.swing.api.ApiClient;
 import com.microchaos.swing.model.Experiment;
 import com.microchaos.swing.model.Service;
+import com.microchaos.swing.ui.theme.TableStyler;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -59,6 +60,7 @@ public class ExperimentsPanel extends JPanel {
             }
         };
         experimentsTable = createTable();
+        TableStyler.styleTable(experimentsTable);
 
         add(headerPanel, BorderLayout.NORTH);
         add(createTablePanel(), BorderLayout.CENTER);

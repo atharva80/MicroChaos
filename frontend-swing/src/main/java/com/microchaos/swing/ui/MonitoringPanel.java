@@ -2,6 +2,7 @@ package com.microchaos.swing.ui;
 
 import com.microchaos.swing.api.ApiClient;
 import com.microchaos.swing.model.MonitoringData;
+import com.microchaos.swing.ui.theme.TableStyler;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -50,6 +51,7 @@ public class MonitoringPanel extends JPanel {
         monitoringTable.setForeground(Color.WHITE);
         monitoringTable.setRowHeight(28);
         monitoringTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        TableStyler.styleTable(monitoringTable);
         monitoringTable.getSelectionModel().addListSelectionListener(e -> updateDetailsForSelection());
 
         detailsArea = new JTextArea(6, 20);

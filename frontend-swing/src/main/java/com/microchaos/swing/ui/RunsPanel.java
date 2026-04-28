@@ -2,6 +2,7 @@ package com.microchaos.swing.ui;
 
 import com.microchaos.swing.api.ApiClient;
 import com.microchaos.swing.model.ExperimentRun;
+import com.microchaos.swing.ui.theme.TableStyler;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -50,6 +51,7 @@ public class RunsPanel extends JPanel {
         runsTable.setForeground(Color.WHITE);
         runsTable.setRowHeight(28);
         runsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        TableStyler.styleTable(runsTable);
         runsTable.getSelectionModel().addListSelectionListener(e -> updateDetailsForSelection());
 
         detailsArea = new JTextArea(8, 20);
